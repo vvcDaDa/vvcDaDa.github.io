@@ -9,11 +9,39 @@
 
   function safeUrl(value, image) {
     const url = String(value).trim();
+    if (image && /^data:image\/(?:png|jpeg|gif|webp);base64,[a-z0-9+/]+={0,2}$/i.test(url)) return url;
     if (/^https?:\/\/[^\s]+$/i.test(url)) return url;
     if (url.startsWith('/') && !url.startsWith('//') && !/[\s\\]/.test(url)) return url;
     if (!image && /^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(url)) return url;
     if (!image && /^#[a-z\d_-]+$/i.test(url)) return url;
     return null;
+  }
+
+  const maxEmbeddedImageBytes = 5 * 1024 * 1024;
+
+  function imageMimeFromHeader(bytes) {
+    if (bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)) return 'image/png';
+    if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return 'image/jpeg';
+    if (bytes.length >= 6 && [71, 73, 70, 56].every((byte, i) => bytes[i] === byte) && (bytes[4] === 55 || bytes[4] === 57) && bytes[5] === 97) return 'image/gif';
+    if (bytes.length >= 12 && [82, 73, 70, 70].every((byte, i) => bytes[i] === byte) && [87, 69, 66, 80].every((byte, i) => bytes[i + 8] === byte)) return 'image/webp';
+    return null;
+  }
+
+  function embeddedImageBytes(markdown) {
+    let bytes = 0;
+    const pattern = /!\[[^\]]*\]\(data:image\/(?:png|jpeg|gif|webp);base64,([a-z0-9+/]+={0,2})\)/gi;
+    for (const match of String(markdown).matchAll(pattern)) {
+      const base64 = match[1];
+      bytes += Math.floor(base64.length * 3 / 4) - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0);
+    }
+    return bytes;
+  }
+
+  function imageMarkdown(filename, mime, base64) {
+    const url = 'data:' + mime + ';base64,' + base64;
+    if (!safeUrl(url, true)) throw new Error('图片数据格式无效。');
+    const alt = String(filename).replace(/\.[^.]+$/, '').replace(/[\[\]()\r\n]/g, ' ').trim() || '文章图片';
+    return '![' + alt + '](' + url + ')';
   }
 
   function inline(source) {
@@ -116,6 +144,7 @@
     if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return '请选择有效的发布日期。';
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.slug)) return '文件名只能用小写英文、数字和连字符，且不能以连字符开头或结尾。';
     if (!d.markdown) return '请先写一些正文。';
+    if (embeddedImageBytes(d.markdown) > maxEmbeddedImageBytes) return '文章图片总大小不能超过 5 MB。';
     return null;
   }
 
@@ -126,7 +155,8 @@
     const source = encodeURIComponent(JSON.stringify(d));
     const dateText = d.date.replace(/-/g, '.');
     const [year, month] = d.date.split('-');
-    const minutes = Math.max(1, Math.ceil(d.markdown.length / 450));
+    const readableText = d.markdown.replace(/!\[[^\]]*\]\(data:image\/(?:png|jpeg|gif|webp);base64,[^)]+\)/gi, '');
+    const minutes = Math.max(1, Math.ceil(readableText.length / 450));
     const title = escapeHtml(d.title);
     const summary = escapeHtml(d.summary);
     const category = escapeHtml(d.category);
@@ -168,5 +198,5 @@
     return `<a class="post-card" href="/posts/${d.slug}.html"><div class="post-number">${number}</div><div class="post-main"><div class="post-meta"><time datetime="${d.date}">${dateText}</time><span>·</span><span>${escapeHtml(d.category)}</span></div><h3>${escapeHtml(d.title)}</h3><p>${escapeHtml(d.summary)}</p><span class="post-read">阅读全文 <span aria-hidden="true">↗</span></span></div><span class="post-arrow" aria-hidden="true">↗</span></a>`;
   }
 
-  global.BlogEditorCore = { escapeHtml, renderMarkdown, excerpt, normalized, validate, buildArticle, buildCard };
+  global.BlogEditorCore = { escapeHtml, renderMarkdown, excerpt, normalized, validate, buildArticle, buildCard, maxEmbeddedImageBytes, imageMimeFromHeader, embeddedImageBytes, imageMarkdown };
 }(globalThis));

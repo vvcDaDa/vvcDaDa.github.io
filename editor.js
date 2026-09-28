@@ -5,6 +5,35 @@
   const fields = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
   const saveStatus = document.getElementById('save-status');
   const storageKey = 'vvcdada-editor-draft-v1';
+  let saveTimer;
+  let imageRange;
+
+  function openDraftDb() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+      const request = indexedDB.open('vvcdada-blog-editor', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => reject(new Error('Draft database is blocked'));
+    });
+  }
+
+  const dbPromise = openDraftDb();
+
+  async function readSavedDraft() {
+    try {
+      const db = await dbPromise;
+      const saved = await new Promise((resolve, reject) => {
+        const request = db.transaction('drafts', 'readonly').objectStore('drafts').get('current');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      if (saved) return saved;
+    } catch (_) { /* Fall back to the previous local draft. */ }
+    try { return JSON.parse(localStorage.getItem(storageKey) || 'null'); }
+    catch (_) { return null; }
+  }
 
   function localDate() {
     const now = new Date();
@@ -27,13 +56,32 @@
     update();
   }
 
-  function saveDraft() {
+  async function saveDraft() {
+    const data = readForm();
     try {
-      localStorage.setItem(storageKey, JSON.stringify(readForm()));
+      const db = await dbPromise;
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction('drafts', 'readwrite');
+        transaction.objectStore('drafts').put(data, 'current');
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+      });
+      try { localStorage.removeItem(storageKey); } catch (_) { /* Storage may be disabled. */ }
       saveStatus.textContent = '已保存在此浏览器';
     } catch (_) {
-      saveStatus.textContent = '本浏览器无法保存草稿，请及时下载';
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        saveStatus.textContent = '已保存在此浏览器';
+      } catch (_) {
+        saveStatus.textContent = '本浏览器无法保存草稿，请及时下载';
+      }
     }
+  }
+
+  function queueSave() {
+    saveStatus.textContent = '正在保存草稿…';
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(saveDraft, 350);
   }
 
   function update() {
@@ -63,19 +111,70 @@
     area.setRangeText(snippet, start, end, 'end');
     area.focus();
     update();
-    saveDraft();
+    queueSave();
   }
 
-  try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+  function fileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error || new Error('无法读取图片。'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function insertImages(files) {
+    const chosen = Array.from(files);
+    if (!chosen.length) return;
+    const existingBytes = core.embeddedImageBytes(fields.markdown.value);
+    const selectedBytes = chosen.reduce((sum, file) => sum + file.size, 0);
+    if (existingBytes + selectedBytes > core.maxEmbeddedImageBytes) {
+      alert('文章图片总大小不能超过 5 MB，请选择更小的图片。');
+      return;
+    }
+    saveStatus.textContent = '正在读取图片…';
+    try {
+      const snippets = [];
+      for (const file of chosen) {
+        const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+        const mime = core.imageMimeFromHeader(header);
+        if (!mime) throw new Error('仅支持 JPG、PNG、GIF、WebP 图片：' + file.name);
+        const base64 = (await fileAsDataUrl(file)).split(',', 2)[1];
+        snippets.push(core.imageMarkdown(file.name, mime, base64));
+      }
+      const area = fields.markdown;
+      const start = imageRange ? imageRange.start : area.selectionStart;
+      const end = imageRange ? imageRange.end : area.selectionEnd;
+      area.setRangeText('\n\n' + snippets.join('\n\n') + '\n\n', start, end, 'end');
+      area.focus();
+      update();
+      await saveDraft();
+      saveStatus.textContent = chosen.length + ' 张图片已插入并保存';
+    } catch (error) {
+      saveStatus.textContent = '图片插入失败';
+      alert(error.message || '无法读取图片。');
+    } finally {
+      imageRange = null;
+    }
+  }
+
+  void readSavedDraft().then(saved => {
     if (saved && typeof saved === 'object') fillForm(saved);
     else fillForm({ date: localDate(), category: '技术笔记', slug: newSlug() });
-  } catch (_) {
-    fillForm({ date: localDate(), category: '技术笔记', slug: newSlug() });
-  }
+  });
 
-  for (const id of ids) fields[id].addEventListener('input', function () { update(); saveDraft(); });
+  for (const id of ids) fields[id].addEventListener('input', function () { update(); queueSave(); });
   for (const button of document.querySelectorAll('[data-insert]')) button.addEventListener('click', function () { insertMarkdown(button.dataset.insert); });
+
+  document.getElementById('insert-image').addEventListener('click', function () {
+    imageRange = { start: fields.markdown.selectionStart, end: fields.markdown.selectionEnd };
+    document.getElementById('image-file').click();
+  });
+
+  document.getElementById('image-file').addEventListener('change', async function () {
+    await insertImages(this.files || []);
+    this.value = '';
+  });
 
   document.getElementById('download').addEventListener('click', function () {
     const data = readForm();
@@ -118,7 +217,7 @@
       const data = JSON.parse(decodeURIComponent(source.content));
       if (!data || typeof data !== 'object') throw new Error('文章原稿格式有误。');
       fillForm(data);
-      saveDraft();
+      await saveDraft();
       saveStatus.textContent = '文章已导入';
     } catch (error) {
       alert(error.message || '导入失败。');

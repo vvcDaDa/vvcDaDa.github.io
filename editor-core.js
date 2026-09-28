@@ -151,7 +151,7 @@
 <body>
   <a class="skip-link" href="#main">跳到正文</a>
   <div class="page-shell">
-    <header class="site-header"><a class="brand" href="/" aria-label="vvcDaDa，返回首页"><span class="brand-mark">v.</span><span>vvcDaDa</span></a><nav class="site-nav" aria-label="主导航"><a href="/">首页</a><a class="is-current" href="/#writing">文章</a><a href="/about.html">关于</a></nav><button class="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色模式"><span aria-hidden="true">◐</span></button></header>
+    <header class="site-header"><a class="brand" href="/" aria-label="vvcDaDa，返回首页"><img class="brand-mark" src="/logo.jpg" alt="" width="44" height="44"><span>vvcDaDa</span></a><nav class="site-nav" aria-label="主导航"><a href="/">首页</a><a class="is-current" href="/#writing">文章</a><a href="/about.html">关于</a></nav><button class="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色模式"><span aria-hidden="true">◐</span></button></header>
     <main id="main" class="inner-main"><article><div class="article-meta"><time datetime="${d.date}">${dateText}</time><span>·</span><span>${category}</span><span>·</span><span>约 ${minutes} 分钟</span></div><h1 class="inner-title article-title">${title}<span class="hero-period">.</span></h1><p class="article-deck">${summary}</p><div class="prose article-body">${renderMarkdown(d.markdown)}</div></article><div class="article-end"><span>写于 ${year} 年 ${Number(month)} 月</span><a href="/">← 返回首页</a></div></main>
     <footer class="site-footer"><span>© ${year} vvcDaDa</span><span>保持好奇，保持记录。</span><a href="#main">回到顶部 ↑</a></footer>
   </div>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f7f4">
+  <meta name="robots" content="noindex,nofollow">
+  <title>写作编辑器 · vvcDaDa</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/editor.css">
+  <script src="/script.js" defer></script>
+  <script src="/editor-core.js" defer></script>
+  <script src="/editor.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到编辑器</a>
+  <div class="page-shell">
+    <header class="site-header"><a class="brand" href="/" aria-label="vvcDaDa，返回首页"><span class="brand-mark">v.</span><span>vvcDaDa</span></a><nav class="site-nav" aria-label="主导航"><a href="/">首页</a><a href="/about.html">关于</a></nav><button class="theme-toggle" type="button" aria-label="切换深色模式" title="切换深色模式"><span aria-hidden="true">◐</span></button></header>
+    <main id="main" class="editor-main">
+      <div class="editor-heading"><div><p class="section-kicker">WRITE / EXPORT</p><h1>写作编辑器<span class="hero-period">.</span></h1><p>写好文章，下载 HTML，再上传到博客仓库。草稿只保存在当前浏览器。</p></div><button id="download" class="primary-link" type="button">下载文章 HTML <span aria-hidden="true">↓</span></button></div>
+      <div class="editor-layout">
+        <section class="editor-panel" aria-labelledby="edit-title"><h2 id="edit-title">文章内容</h2><div class="fields-grid"><label>标题<input id="title" type="text" maxlength="100" placeholder="给文章起个标题" autocomplete="off"></label><label>日期<input id="date" type="date"></label><label>分类<input id="category" type="text" maxlength="30" placeholder="例如：技术笔记"></label><label>文件名（英文、数字、连字符）<span class="filename-field"><input id="slug" type="text" pattern="[a-z0-9-]+" placeholder="my-first-post" spellcheck="false"><span>.html</span></span></label></div><label class="summary-label">简介<textarea id="summary" rows="2" maxlength="220" placeholder="用一两句话介绍这篇文章"></textarea></label><div class="body-label"><label for="markdown">正文 <span>支持简单 Markdown</span></label><span id="save-status" role="status">准备就绪</span></div><div class="markdown-toolbar" aria-label="Markdown 快捷输入"><button type="button" data-insert="heading" title="二级标题">H2</button><button type="button" data-insert="bold" title="加粗">B</button><button type="button" data-insert="link" title="链接">链接</button><button type="button" data-insert="list" title="无序列表">列表</button><button type="button" data-insert="code" title="代码块">代码</button></div><textarea id="markdown" class="markdown-input" spellcheck="true" placeholder="从这里开始写……&#10;&#10;## 一个小标题&#10;正文可以使用 **加粗**、[链接](https://example.com) 和代码块。"></textarea><details class="syntax-help"><summary>Markdown 用法</summary><p><code>## 标题</code> · <code>**加粗**</code> · <code>*斜体*</code> · <code>- 列表</code> · <code>[链接](https://...)</code> · <code>![说明](https://...)</code> · 三个反引号包围代码块。图片需先有可访问的网址。</p></details><div class="editor-actions"><label class="import-button" for="import-file">导入之前由本编辑器生成的 HTML</label><input id="import-file" type="file" accept=".html,text/html"><span>无需登录；下载不会自动发布。</span></div></section>
+        <section class="preview-panel" aria-labelledby="preview-title"><div class="preview-heading"><h2 id="preview-title">实时预览</h2><span>文章页面</span></div><div class="preview-paper"><div class="article-meta"><time id="preview-date"></time><span>·</span><span id="preview-category"></span></div><h2 id="preview-article-title" class="inner-title article-title"></h2><p id="preview-summary" class="article-deck"></p><div id="preview-body" class="prose article-body"></div></div></section>
+      </div>
+      <section class="publish-guide"><div><p class="section-kicker">NEXT / PUBLISH</p><h2>下载后怎么发布？</h2><ol><li>把下载的 HTML 文件上传到仓库的 <a href="https://github.com/vvcDaDa/vvcDaDa.github.io/tree/main/posts" target="_blank" rel="noopener noreferrer"><code>posts/</code> 文件夹</a>。</li><li>如果希望文章出现在首页，把下面的卡片代码粘贴到 <a href="https://github.com/vvcDaDa/vvcDaDa.github.io/edit/main/index.html" target="_blank" rel="noopener noreferrer"><code>index.html</code></a> 的 <code>&lt;section id="writing"&gt;</code> 中，放在已有文章卡片之前。</li></ol></div><div class="card-code"><div><strong>首页卡片代码</strong><button id="copy-card" type="button">复制代码</button></div><textarea id="card-output" readonly aria-label="首页卡片 HTML 代码"></textarea></div></section>
+    </main>
+    <footer class="site-footer"><span>© 2026 vvcDaDa</span><span>在浏览器里写作。</span><a href="#main">回到顶部 ↑</a></footer>
+  </div>
+</body>
+</html>
